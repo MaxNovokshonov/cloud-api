@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://db:5432/cloud}
+    username: ${DB_USERNAME:cloud}
+    password: ${DB_PASSWORD:cloud}

@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: cloud-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloud}
+      POSTGRES_USER: ${POSTGRES_USER:-cloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cloud}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - cloud-net
+
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    container_name: cloud-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8082:80"
+    networks:
+      - cloud-net
+
+  app:
+    build: .
+    container_name: cloud-app
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-cloud}
+      DB_USERNAME: ${POSTGRES_USER:-cloud}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-cloud}
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cloud-net
+
+volumes:
+  pgdata:
+
+networks:
+  cloud-net:
