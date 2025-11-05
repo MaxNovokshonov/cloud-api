@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import ru.netology.cloud_api.dto.ErrorResponse;
 import ru.netology.cloud_api.exception.BadCredentials400Exception;
+import ru.netology.cloud_api.exception.Unauthorized401Exception;
 
 @ControllerAdvice
 public class ExceptionAdvice {
@@ -15,6 +16,12 @@ public class ExceptionAdvice {
     public ResponseEntity<ErrorResponse> badCreds(BadCredentials400Exception ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(1001, ex.getMessage()));
+    }
+
+    @ExceptionHandler(Unauthorized401Exception.class)
+    public ResponseEntity<ErrorResponse> unauthorized(Unauthorized401Exception ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(1002, ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -26,4 +33,5 @@ public class ExceptionAdvice {
                 .body(new ErrorResponse(1003, msg));
     }
 }
+
 

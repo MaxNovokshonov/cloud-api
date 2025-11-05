@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import ru.netology.cloud_api.domain.AuthToken;
 import ru.netology.cloud_api.domain.User;
 import ru.netology.cloud_api.exception.BadCredentials400Exception;
+import ru.netology.cloud_api.exception.Unauthorized401Exception;
 import ru.netology.cloud_api.repository.AuthTokenRepository;
 import ru.netology.cloud_api.repository.UserRepository;
 
@@ -46,6 +47,19 @@ public class AuthService {
         tokens.save(at);
 
         return rawToken;
+    }
+
+    public void logout(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new Unauthorized401Exception("Unauthorized");
+        }
+        byte[] hash = sha256(rawToken);
+        AuthToken token = tokens.findById(hash).orElseThrow(() -> new Unauthorized401Exception("Unauthorized"));
+        if (token.getRevokedAt() != null || token.getExpiresAt().isBefore(Instant.now())) {
+            throw new Unauthorized401Exception("Unauthorized");
+        }
+        token.setRevokedAt(Instant.now());
+        tokens.save(token);
     }
 
     private String generateToken() {
