@@ -1,11 +1,13 @@
 package ru.netology.cloud_api.service;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import ru.netology.cloud_api.domain.FileBlob;
 import ru.netology.cloud_api.domain.FileMeta;
 import ru.netology.cloud_api.domain.User;
+import ru.netology.cloud_api.dto.FileListItem;
 import ru.netology.cloud_api.exception.BadRequest400Exception;
 import ru.netology.cloud_api.exception.Unauthorized401Exception;
 import ru.netology.cloud_api.repository.FileBlobRepository;
@@ -15,6 +17,7 @@ import ru.netology.cloud_api.repository.UserRepository;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -50,7 +53,6 @@ public class FileService {
 
     private static byte[] decodeOptionalHash(String hash) {
         if (hash == null || hash.isBlank()) return null;
-        // Принимаем либо hex, либо base64url
         String s = hash.trim();
         try {
             if (s.matches("^[0-9a-fA-F]{64}$")) {
@@ -89,6 +91,7 @@ public class FileService {
         User user = users.findById(userId).orElseThrow(() -> new Unauthorized401Exception("Unauthorized"));
 
         FileMeta meta = new FileMeta();
+        meta.setId(UUID.randomUUID());
         meta.setUser(user);
         meta.setFilename(filename);
         meta.setSizeBytes(data.length);
@@ -136,6 +139,15 @@ public class FileService {
                 .orElseThrow(() -> new BadRequest400Exception("file not found"));
         blobs.deleteByFileId(meta.getId());
         files.delete(meta);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FileListItem> list(UUID userId, Integer limit) {
+        int n = (limit == null || limit <= 0) ? 100 : Math.min(limit, 1000);
+        var page = files.findByUser_IdOrderByUpdatedAtDesc(userId, PageRequest.of(0, n));
+        return page.getContent().stream()
+                .map(m -> new FileListItem(m.getFilename(), m.getSizeBytes()))
+                .toList();
     }
 
     public static class DownloadResult {
