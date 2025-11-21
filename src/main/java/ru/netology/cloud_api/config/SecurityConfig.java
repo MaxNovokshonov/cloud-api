@@ -19,6 +19,12 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
+    private final AppProperties appProperties;
+
+    public SecurityConfig(AppProperties appProperties) {
+        this.appProperties = appProperties;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -27,9 +33,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of("http://localhost:8081"));
+        cfg.setAllowedOrigins(resolveAllowedOrigins());
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("auth-token", "Content-Type"));
+        cfg.setAllowedHeaders(List.of("auth-token", "Content-Type", "Authorization", "Accept", "Origin"));
+        cfg.setExposedHeaders(List.of("Content-Disposition"));
         cfg.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
@@ -50,5 +57,14 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    private List<String> resolveAllowedOrigins() {
+        var cors = appProperties.getCors();
+        var origins = cors != null ? cors.getAllowedOrigins() : null;
+        if (origins == null || origins.isEmpty()) {
+            return List.of("http://localhost:8081");
+        }
+        return origins;
     }
 }
